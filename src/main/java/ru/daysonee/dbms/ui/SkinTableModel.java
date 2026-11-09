@@ -1,7 +1,9 @@
-package ru.dota.skins.ui;
+package ru.daysonee.dbms.ui;
 
-import ru.dota.skins.Skin;
 import javax.swing.table.AbstractTableModel;
+
+import ru.daysonee.dbms.Skin;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,7 +19,7 @@ public class SkinTableModel extends AbstractTableModel {
 
     public Skin getSkinAt(int row) {
         return rows.get(row);
-    } 
+    }
 
     @Override public int getRowCount() {return rows.size();}
     @Override public int getColumnCount() {return COLUMNS.length;}
@@ -36,7 +38,7 @@ public class SkinTableModel extends AbstractTableModel {
         };
     }
 
-    @Override 
+    @Override
     public Class<?> getColumnClass(int col) {
         return switch (col) {
             case 0 -> Integer.class;

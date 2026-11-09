@@ -1,4 +1,4 @@
-package ru.dota.skins.storage;
+package ru.daysonee.dbms.storage;
 
 import java.io.File;
 import java.io.IOException;

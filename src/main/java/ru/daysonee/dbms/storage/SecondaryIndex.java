@@ -1,10 +1,10 @@
-package ru.dota.skins.storage;
+package ru.daysonee.dbms.storage;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-import ru.dota.skins.Skin;
+import ru.daysonee.dbms.Skin;
 
 public class SecondaryIndex implements AutoCloseable {
     public static final int MAGIC = 0x53494458;

@@ -1,8 +1,9 @@
-package ru.dota.skins;
+package ru.daysonee.dbms;
 
-import ru.dota.skins.storage.Database;
 import java.io.IOException;
 import java.util.Random;
+
+import ru.daysonee.dbms.storage.Database;
 
 public class Benchmark {
     private static final String[] RARITIES =

@@ -1,11 +1,12 @@
-package ru.dota.skins.ui;
-
-import ru.dota.skins.Skin;
-import ru.dota.skins.export.XlsxExporter;
-import ru.dota.skins.storage.Database;
+package ru.daysonee.dbms.ui;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
+
+import ru.daysonee.dbms.Skin;
+import ru.daysonee.dbms.export.XlsxExporter;
+import ru.daysonee.dbms.storage.Database;
+
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;

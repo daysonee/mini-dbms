@@ -1,8 +1,9 @@
-package ru.dota.skins.storage;
+package ru.daysonee.dbms.storage;
 
-import ru.dota.skins.Skin;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+
+import ru.daysonee.dbms.Skin;
 
 public class DataFile implements AutoCloseable {
     public static final int MAGIC = 0x534B494E;
@@ -33,7 +34,7 @@ public class DataFile implements AutoCloseable {
     }
 
     public void flush() throws IOException {
-        file.getChannel().force(true); 
+        file.getChannel().force(true);
     }
 
     public static DataFile open(String path) throws IOException {

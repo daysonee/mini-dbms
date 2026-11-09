@@ -1,9 +1,10 @@
-package ru.dota.skins.export;
+package ru.daysonee.dbms.export;
 
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
-import ru.dota.skins.storage.Database;
+
+import ru.daysonee.dbms.storage.Database;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -12,7 +13,7 @@ public class XlsxExporter {
     private static final String[] HEADERS = {"ID", "Название", "Герой", "Редкость", "Цена", "Обмен"};
 
     public static int export(Database db, String path) throws IOException {
-        try (SXSSFWorkbook wb = new SXSSFWorkbook(100);          
+        try (SXSSFWorkbook wb = new SXSSFWorkbook(100);
              FileOutputStream out = new FileOutputStream(path)) {
 
             Sheet sheet = wb.createSheet("Skins");
@@ -21,7 +22,7 @@ public class XlsxExporter {
                 header.createCell(i).setCellValue(HEADERS[i]);
             }
 
-            int[] rowNum = {1};   
+            int[] rowNum = {1};
             db.forEach(s -> {
                 Row r = sheet.createRow(rowNum[0]++);
                 r.createCell(0).setCellValue(s.getId());
@@ -33,9 +34,9 @@ public class XlsxExporter {
             });
 
             wb.write(out);
-            return rowNum[0] - 1;   
+            return rowNum[0] - 1;
         }
     }
 
-    
+
 }

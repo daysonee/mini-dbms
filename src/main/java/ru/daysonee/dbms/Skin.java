@@ -1,4 +1,4 @@
-package ru.dota.skins;
+package ru.daysonee.dbms;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;

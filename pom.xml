@@ -4,8 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>ru.dota.skins</groupId>
-    <artifactId>file-based-db</artifactId>
+    <groupId>ru.daysonee</groupId>
+    <artifactId>mini-dbms</artifactId>
     <version>1.0-SNAPSHOT</version>
 
 <properties>
@@ -28,7 +28,7 @@
             <artifactId>exec-maven-plugin</artifactId>
             <version>3.5.0</version>
             <configuration>
-                <mainClass>ru.dota.skins.Main</mainClass>
+                <mainClass>ru.daysonee.dbms.Main</mainClass>
             </configuration>
         </plugin>
     </plugins>

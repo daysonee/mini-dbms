@@ -1,6 +1,5 @@
-package ru.dota.skins.storage;
+package ru.daysonee.dbms.storage;
 
-import ru.dota.skins.Skin;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -16,6 +15,8 @@ import java.nio.file.StandardCopyOption;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+
+import ru.daysonee.dbms.Skin;
 
 public class Database implements AutoCloseable {
     private final String basePath;

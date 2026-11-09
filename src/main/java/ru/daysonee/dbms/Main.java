@@ -1,7 +1,8 @@
-package ru.dota.skins;
+package ru.daysonee.dbms;
 
-import ru.dota.skins.ui.MainWindow;
 import javax.swing.SwingUtilities;
+
+import ru.daysonee.dbms.ui.MainWindow;
 
 public class Main {
     public static void main(String[] args) {

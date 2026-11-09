@@ -1,4 +1,4 @@
-package ru.daysonee.dbms;
+/*package ru.daysonee.dbms;
 
 import java.io.IOException;
 import java.util.Random;
@@ -74,3 +74,4 @@ public class Benchmark {
         Database.delete("bench");
     }
 }
+*/

@@ -1,4 +1,4 @@
-package ru.daysonee.dbms.storage;
+/*package ru.daysonee.dbms.storage;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -161,3 +161,4 @@ public class DataFile implements AutoCloseable {
         file.close();
     }
 }
+*/

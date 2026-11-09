@@ -1,4 +1,4 @@
-package ru.daysonee.dbms.storage;
+/*package ru.daysonee.dbms.storage;
 
 import java.io.File;
 import java.io.IOException;
@@ -194,3 +194,4 @@ public class SecondaryIndex implements AutoCloseable {
         file.close();
     }
 }
+*/

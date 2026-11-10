@@ -11,7 +11,12 @@ public class TableSchema {
     private final List<Column> columns;
     private final Map<String, Integer> indexByName = new HashMap<>();
     private final int primaryKeyIndex;
-
+    /**
+     * Создаёт схему таблицы и проверяет ее
+     * @param name имя таблицы
+     * @param columns колонки таблицы
+     * @throws DbException если схема таблицы неверная
+     */
     public TableSchema(String name, List<Column> columns){
         this.name = name;
         this.columns = List.copyOf(columns);
@@ -39,29 +44,30 @@ public class TableSchema {
 
     }
     /**
-     *
+     * Возвращает имя таблицы
      * @return имя таблицы
      */
     public String getName() { return name; }
     /**
-     *
+     * Возвращает список колонок таблицы
      * @return список колонок таблицы
      */
     public List<Column> getColumns() { return columns; }
     /**
-     *
+     *  Возвращает номер колонки первичного ключа таблицы
      * @return индекс первичного ключа таблицы
      */
     public int getPrimaryKeyIndex() { return primaryKeyIndex; }
     /**
-     *
+     * Возвращает колонку первичного ключа
      * @return первичный ключ таблицы
      */
     public Column getPrimaryKey() { return columns.get(primaryKeyIndex); }
 
     /**
-     * Номер колонки по имени, без учёта регистра.
-     *
+     * Номер колонки по имени, без учета регистра.
+     * @param columnName имя колонки
+     * @return индекс колонки
      * @throws DbException если колонки нет
      */
     public int indexOf(String columnName) {
@@ -72,7 +78,7 @@ public class TableSchema {
         return i;
     }
     /**
-     *
+     * находит имя колонки 
      * @param columnName имя колонки
      * @return данные о колонке
      */

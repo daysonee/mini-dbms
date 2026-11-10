@@ -12,14 +12,21 @@ import ru.daysonee.dbms.DbException;
  * @param notNull    допускается ли Null
  * @param refTable   таблица на которую ссылается внешний ключ или Null
  * @param refColumn  колонка на которую ссылается внешний ключ или Null
+ *
  */
 
 public record Column(String name, DataType type, int length, boolean primaryKey, boolean notNull, String refTable,
         String refColumn) {
     public static final int MAX_STRING_LENGTH = 255;
-
+    /**
+     * Проверяет описание колонки
+     * @throws DbException если описание неверное
+     */
     public Column {
-        if (name == null || name.equals("")) {
+        if (type == null) {
+            throw new DbException("Тип колонки не может быть null");
+        }
+        if (name == null || name.isBlank()) {
             throw new DbException("имя не должно быть пустым или равнять null");
         }
         if (type == DataType.STRING) {
@@ -38,6 +45,7 @@ public record Column(String name, DataType type, int length, boolean primaryKey,
     }
 
     /**
+     * Возвращает размер колонки в байтах
      * @return возвращает размер значнения колонки в байтах в таблице
      */
     public int sizeInBytes() {
@@ -45,7 +53,8 @@ public record Column(String name, DataType type, int length, boolean primaryKey,
     }
 
     /**
-     * @return есть ли у колонки внешний ключ
+     * Проверяет, является ли колонка внешним ключом
+     * @return true, если колонка ссылается на другую таблицу
      */
     public boolean isForeignKey() {
         return refTable != null;
@@ -53,7 +62,8 @@ public record Column(String name, DataType type, int length, boolean primaryKey,
 
     /**
      * Приводит значение к типу колонки
-     *
+     * @param value значение из запроса или null
+     * @return значение приведенное к типу колонки или null
      * @throws DbException если значение не подходит
      */
     public Object check(Object value) {

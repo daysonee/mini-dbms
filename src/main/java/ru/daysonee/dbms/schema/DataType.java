@@ -3,9 +3,21 @@ package ru.daysonee.dbms.schema;
 import ru.daysonee.dbms.DbException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
-
+/**
+ * Типы данных в СУБД
+ * У каждого типа известен размер значения в файле
+ */
 public enum DataType {
-    INT(4), DOUBLE(8), STRING(0), DATE(8), BOOLEAN(1);
+    /** Целое число, 4 байта */
+    INT(4),
+    /** Число с плавающей точкой, 8 байт */
+    DOUBLE(8),
+    /** Строка фиксированной длины, 2 байта на символ */
+    STRING(0),
+    /** Дата без времени хранится числом дней с 01-01-1970, 8 байт */
+    DATE(8),
+    /** Логическое значение, 1 байт */
+    BOOLEAN(1);
 
     private final int fixedSize;
 
@@ -83,7 +95,8 @@ public enum DataType {
 
     /**
      * Находит тип по имени из SQL
-     *
+     * @param name имя типа из запроса
+     * @return найденный тип
      * @throws DbException если типа не существует
      */
     public static DataType fromSql(String name) {

@@ -46,7 +46,7 @@ public class Catalog {
 
     /**
      * Возвращает таблицу по имени
-     * @param table
+     * @param table имя таблицы
      * @return таблицу
      * @throws DbException если таблицы не существует
      */

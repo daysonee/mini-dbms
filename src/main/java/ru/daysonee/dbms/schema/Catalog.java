@@ -5,6 +5,8 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 
+import org.apache.poi.hssf.record.DVALRecord;
+
 /** Каталог - схемы всех таблиц базы, хранится в файле catalog.bin. */
 public class Catalog {
     private static final int MAGIC = 0x43544C47;
@@ -12,22 +14,25 @@ public class Catalog {
     private final Path file;
     private final Path tmp;
     private final Map<String, TableSchema> tables = new LinkedHashMap<>();
+    private final List<IndexInfo> indexes = new ArrayList<>();
 
-    private Catalog(Path dir){
+    private Catalog(Path dir) {
         this.file = dir.resolve("catalog.bin");
         this.tmp = dir.resolve("catalog.tmp");
     }
+
     /**
      * Открывает каталог в папке базы данных, если если файла нет, то создает
+     *
      * @param dir путь до папки базы данных
      * @return объект класса Catalog
      * @throws IOException если файл каталога не получилось прочитать или создать
      */
-    public static Catalog open(Path dir) throws IOException{
+    public static Catalog open(Path dir) throws IOException {
         Files.createDirectories(dir);
         Catalog c = new Catalog(dir);
         Files.deleteIfExists(c.tmp);
-        if (Files.exists(c.file)){
+        if (Files.exists(c.file)) {
             c.load();
         } else {
             c.save();
@@ -37,6 +42,7 @@ public class Catalog {
 
     /**
      * Проверяет существует ли таблица в каталоге
+     *
      * @param table название таблицы
      * @return true или false
      */
@@ -46,6 +52,7 @@ public class Catalog {
 
     /**
      * Возвращает таблицу по имени
+     *
      * @param table имя таблицы
      * @return таблицу
      * @throws DbException если таблицы не существует
@@ -53,13 +60,15 @@ public class Catalog {
     public TableSchema get(String table) {
 
         TableSchema t = tables.get(table.toLowerCase());
-        if (t == null){
+        if (t == null) {
             throw new DbException("Не существует таблицы с именем: " + table);
         }
         return t;
     }
+
     /**
      * Возвращает схемы всех таблиц каталога
+     *
      * @return все таблицы в каталоге
      */
     public Collection<TableSchema> all() {
@@ -68,12 +77,13 @@ public class Catalog {
 
     /**
      * Добавляет таблицу и сохраняет в каталог
+     *
      * @param schema схема таблицы
      * @throws DbException если таблица есть или неверный внешний клюс
      * @throws IOException если каталог не удалось сохранить
      */
-    public void create(TableSchema schema) throws IOException{
-        if (exists(schema.getName())){
+    public void create(TableSchema schema) throws IOException {
+        if (exists(schema.getName())) {
             throw new DbException("Таблица с именем " + schema.getName() + " уже существует");
         }
         for (Column c : schema.getColumns()) {
@@ -82,70 +92,82 @@ public class Catalog {
             }
             TableSchema ref = get(c.refTable());
             Column target = ref.getColumn(c.refColumn());
-            if (!target.primaryKey()){
+            if (!target.primaryKey()) {
                 throw new DbException("Внешний ключ " + c.name() + " должен ссылаться на первичный ключ");
             }
             if (target.type() != c.type()) {
-                throw new DbException("Тип " + c.name() + " не совпадает с типом " + c.refTable() + "." + c.refColumn());
+                throw new DbException(
+                        "Тип " + c.name() + " не совпадает с типом " + c.refTable() + "." + c.refColumn());
             }
         }
         tables.put(schema.getName().toLowerCase(), schema);
         save();
     }
-     /**
-      * Удаляет таблицу из каталога если она существует
-      * @param tableName ися удаляемой таблицы
-      * @throws DbException если на таблицу ссылается другая таблица или ее нет
-      * @throws IOException если каталог не удалось сохранить
-      */
-    public void drop(String tableName) throws IOException{
+
+    /**
+     * Удаляет таблицу из каталога если она существует
+     *
+     * @param tableName ися удаляемой таблицы
+     * @throws DbException если на таблицу ссылается другая таблица или ее нет
+     * @throws IOException если каталог не удалось сохранить
+     */
+    public void drop(String tableName) throws IOException {
         TableSchema table = get(tableName);
-        for (TableSchema t : tables.values()){
-            for ( Column c : t.getColumns()){
-                if (c.isForeignKey() && c.refTable().equalsIgnoreCase(tableName)){
+        for (TableSchema t : tables.values()) {
+            for (Column c : t.getColumns()) {
+                if (c.isForeignKey() && c.refTable().equalsIgnoreCase(tableName)) {
                     throw new DbException("Таблица " + t.getName() + " ссылается на таблицу " + tableName);
                 }
             }
         }
         tables.remove(tableName.toLowerCase());
+        indexes.removeIf(i -> i.table().equalsIgnoreCase(tableName));
         save();
     }
+
     /** Записывает каталог во временный файл и атомарно заменяет им основной */
-    private void save() throws IOException{
-        try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(tmp)))){
+    private void save() throws IOException {
+        try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(tmp)))) {
             out.writeInt(MAGIC);
             out.writeInt(tables.size());
-            for (TableSchema t : tables.values()){
+            for (TableSchema t : tables.values()) {
                 out.writeUTF(t.getName());
                 out.writeInt(t.getColumns().size());
-                for (Column c : t.getColumns()){
+                for (Column c : t.getColumns()) {
                     out.writeUTF(c.name());
                     out.writeByte(c.type().ordinal());
                     out.writeInt(c.length());
                     out.writeBoolean(c.primaryKey());
                     out.writeBoolean(c.notNull());
                     out.writeBoolean(c.isForeignKey());
-                    if (c.isForeignKey()){
+                    if (c.isForeignKey()) {
                         out.writeUTF(c.refTable());
                         out.writeUTF(c.refColumn());
                     }
                 }
             }
+            out.writeInt(indexes.size());
+            for (IndexInfo i : indexes) {
+                out.writeUTF(i.name());
+                out.writeUTF(i.table());
+                out.writeUTF(i.column());
+            }
         }
         Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
     }
+
     /** Читает каталог из файла */
-    private void load() throws IOException{
-        try(DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(file)))){
+    private void load() throws IOException {
+        try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(file)))) {
             if (in.readInt() != MAGIC) {
                 throw new IOException("Файл каталога повреждён");
             }
             int tableCount = in.readInt();
-            for (int i = 0; i < tableCount; ++i){
+            for (int i = 0; i < tableCount; ++i) {
                 String tableName = in.readUTF();
                 int columnCount = in.readInt();
                 List<Column> columns = new ArrayList<>();
-                for (int j = 0; j < columnCount; ++j){
+                for (int j = 0; j < columnCount; ++j) {
                     String name = in.readUTF();
                     DataType type = DataType.values()[in.readByte()];
                     int length = in.readInt();
@@ -154,15 +176,62 @@ public class Catalog {
                     boolean isForeignKey = in.readBoolean();
                     String refTable = null;
                     String refColumn = null;
-                    if (isForeignKey){
+                    if (isForeignKey) {
                         refTable = in.readUTF();
                         refColumn = in.readUTF();
                     }
-
                     columns.add(new Column(name, type, length, primaryKey, notNull, refTable, refColumn));
                 }
                 tables.put(tableName.toLowerCase(), new TableSchema(tableName, columns));
             }
+            int indexCount = in.readInt();
+            for (int k = 0; k < indexCount; ++k){
+                indexes.add(new IndexInfo(in.readUTF(), in.readUTF(), in.readUTF()));
+            }
         }
     }
+
+    /**
+     * Возвращает индексы таблицы, созданные CREATE INDEX
+     * @param table имя таблицы
+     * @return список индексов
+     */
+    public List<IndexInfo> indexesOf(String table) {
+        List<IndexInfo> result = new ArrayList<>();
+        for (IndexInfo i : indexes) {
+            if (i.table().equalsIgnoreCase(table)) {
+                result.add(i);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Добавляет индекс в каталог и сохраняет каталог на диск
+     * @param info описание индекса
+     * @throws DbException если имя индекса занято
+     * @throws IOException если каталог не удалось сохранить
+     */
+    public void createIndex(IndexInfo info) throws IOException {
+        for (IndexInfo i : indexes){
+            if (i.name().equalsIgnoreCase(info.name())){
+                throw new DbException("Индекс " + i.name() + " уже существует");
+            }
+        }
+        TableSchema t = get(info.table());
+        Column c = t.getColumn(info.column());
+        if (c.primaryKey()){
+            throw new DbException("Индекс по первичному ключу уже создан");
+        }
+        List<IndexInfo> idxs = indexesOf(info.table());
+        for (IndexInfo i : idxs){
+            if (i.column().equalsIgnoreCase(info.column())){
+                throw new DbException("По колонке " + c.name() + " уже есть индекс" + i.name());
+            }
+        }
+        indexes.add(new IndexInfo(info.name(), t.getName(), c.name()));
+        save();
+    }
+
+
 }

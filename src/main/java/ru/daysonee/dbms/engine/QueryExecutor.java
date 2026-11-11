@@ -4,11 +4,13 @@ import ru.daysonee.dbms.DbException;
 import ru.daysonee.dbms.schema.Column;
 import ru.daysonee.dbms.schema.TableSchema;
 import ru.daysonee.dbms.sql.Condition;
+import ru.daysonee.dbms.sql.Operator;
 import ru.daysonee.dbms.sql.Parser;
 import ru.daysonee.dbms.sql.statements.*;
 import ru.daysonee.dbms.storage.Row;
 import ru.daysonee.dbms.storage.StoredRow;
 import ru.daysonee.dbms.storage.Table;
+import ru.daysonee.dbms.schema.IndexInfo;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,7 +20,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
-
 
 /** Выполняет sql запросы над базой данных */
 public class QueryExecutor {
@@ -57,7 +58,7 @@ public class QueryExecutor {
         return switch (statement) {
             case CreateTableStatement s -> createTable(s);
             case DropTableStatement s -> dropTable(s);
-            case CreateIndexStatement s -> throw new DbException("CREATE INDEX появится в уроке 5");
+            case CreateIndexStatement s -> createIndex(s);
             case InsertStatement s -> insert(s);
             case SelectStatement s -> select(s);
             case UpdateStatement s -> update(s);
@@ -65,10 +66,16 @@ public class QueryExecutor {
         };
     }
 
+    private QueryResult createIndex(CreateIndexStatement s) throws IOException {
+        db.createIndex(new IndexInfo(s.name(), s.table(), s.column()));
+        return QueryResult.message("Индекс " + s.name() + " создан");
+    }
+
     // CREATE || DROP
 
     /**
      * Создает таблицу по sql запросу
+     *
      * @param s данные таблицы для создания
      * @return сообщение о создании таблицы
      * @throws IOException
@@ -80,10 +87,11 @@ public class QueryExecutor {
 
     /**
      * Удаляет таблицу из базы данных по sql запросу
+     *
      * @param s данные таблицы для удаления
      * @return сообщение об удалении таблицы
      * @throws IOException
-     * */
+     */
     private QueryResult dropTable(DropTableStatement s) throws IOException {
         db.dropTable(s.table());
         return QueryResult.message("Таблица " + s.table() + " удалена");
@@ -162,10 +170,11 @@ public class QueryExecutor {
 
     /**
      * Ищет строки в таблице по sql запросу
+     *
      * @param s данные для запроса
      * @return сообщение о найденых строках
      */
-    private QueryResult select(SelectStatement s) {
+    private QueryResult select(SelectStatement s) throws IOException {
         Table table = db.table(s.table());
         TableSchema schema = table.schema();
 
@@ -185,22 +194,22 @@ public class QueryExecutor {
 
         Predicate<Row> filter = matcher(schema, s.where());
         List<Row> result = new ArrayList<>();
-        for (StoredRow stored : table) {
-            if (filter.test(stored.row())) {
-                Object[] values = new Object[indexes.size()];
-                for (int i = 0; i < indexes.size(); i++) {
-                    values[i] = stored.row().get(indexes.get(i));
-                }
-                result.add(new Row(values));
+        for (StoredRow stored : find(table, s.where())) {
+            Object[] values = new Object[indexes.size()];
+            for (int i = 0; i < indexes.size(); i++) {
+                values[i] = stored.row().get(indexes.get(i));
             }
+            result.add(new Row(values));
         }
-        return new QueryResult(names, result, "Найдено строк: " + result.size());
+        return new QueryResult(names, result, "Найдено строк: " + result.size()
+                + (usesIndex(table, s.where()) ? " (по индексу)" : " (полный перебор)"));
     }
 
     // UPDATE
 
     /**
      * Обновляет данные в таблице по sql запросу
+     *
      * @param s данные для обновления
      * @return сообщение об обновлении
      * @throws IOException
@@ -214,7 +223,7 @@ public class QueryExecutor {
                 throw new DbException("Изменять первичный ключ нельзя");
             }
         }
-        List<StoredRow> matched = findAll(table, matcher(schema, s.where()));
+        List<StoredRow> matched = find(table, s.where());
         List<Row> updated = new ArrayList<>();
         for (StoredRow stored : matched) {
             Row row = stored.row();
@@ -236,6 +245,7 @@ public class QueryExecutor {
 
     /**
      * Удаляет строки из таблицы по sql запросу
+     *
      * @param s данные для удаления
      * @return сообщение об удалении
      * @throws IOException
@@ -243,7 +253,7 @@ public class QueryExecutor {
     private QueryResult delete(DeleteStatement s) throws IOException {
         Table table = db.table(s.table());
         TableSchema schema = table.schema();
-        List<StoredRow> matched = findAll(table, matcher(schema, s.where()));
+        List<StoredRow> matched = find(table, s.where());
         for (StoredRow stored : matched) {
             Row row = stored.row();
             checkNotReferenced(schema, row.get(schema.getPrimaryKeyIndex()));
@@ -315,14 +325,8 @@ public class QueryExecutor {
      * @param key   значение первичного ключа
      * @return найденная строка или null
      */
-    private static StoredRow findByKey(Table table, Object key) {
-        int pk = table.schema().getPrimaryKeyIndex();
-        for (StoredRow stored : table) {
-            if (Objects.equals(stored.row().get(pk), key)) {
-                return stored;
-            }
-        }
-        return null;
+    private static StoredRow findByKey(Table table, Object key) throws IOException {
+        return table.findByKey(key);
     }
 
     /**
@@ -332,7 +336,7 @@ public class QueryExecutor {
      * @param row    строка
      * @throws DbException если ссылка ведет на несуществующую строку
      */
-    private void checkForeignKeys(TableSchema schema, Row row) {
+    private void checkForeignKeys(TableSchema schema, Row row) throws IOException {
         List<Column> columns = schema.getColumns();
         for (int i = 0; i < columns.size(); i++) {
             Column c = columns.get(i);
@@ -350,21 +354,52 @@ public class QueryExecutor {
      * @param key    первичный ключ удаляемой строки
      * @throws DbException если на строку есть ссылки
      */
-    private void checkNotReferenced(TableSchema schema, Object key) {
+    private void checkNotReferenced(TableSchema schema, Object key) throws IOException{
         for (TableSchema other : db.catalog().all()) {
             List<Column> columns = other.getColumns();
             for (int i = 0; i < columns.size(); ++i) {
                 Column c = columns.get(i);
                 if (c.isForeignKey() && c.refTable().equalsIgnoreCase(schema.getName())) {
                     int index = i;
-                    for (StoredRow stored : db.table(other.getName())) {
-                        if (Objects.equals(stored.row().get(index), key)) {
-                            throw new DbException("Строку с ключом " + key
-                                    + " нельзя удалить: на неё ссылается таблица " + other.getName());
-                        }
+                    Table refTable = db.table(other.getName());
+                    boolean referenced = refTable.hasIndex(index) ? !refTable.lookup(index, key).isEmpty() : !findAll(refTable, r -> Objects.equals(r.get(index), key)).isEmpty();
+                    if (referenced) {
+                        throw new DbException("Строку с ключом " + key + " нельзя удалить: на неё ссылается таблица " + other.getName());
                     }
                 }
             }
         }
+    }
+
+
+
+    /**
+     * Можно ли выполнить условие через индекс
+     *
+     * @param table таблица
+     * @param where условие или null
+     * @return true, если будет использован индекс
+     */
+    private static boolean usesIndex(Table table, Condition where) {
+        return where != null && where.operator() == Operator.EQ
+                && table.hasIndex(table.schema().indexOf(where.column()));
+    }
+
+    /**
+     * Находит строки по условию через индекс если он есть, иначе полным перебором
+     *
+     * @param table таблица
+     * @param where условие или null
+     * @return найденные строки с номерами ячеек
+     * @throws IOException при ошибке чтения
+     */
+    private List<StoredRow> find(Table table, Condition where) throws IOException {
+        TableSchema schema = table.schema();
+        if (usesIndex(table, where)) {
+            int index = schema.indexOf(where.column());
+            Object value = schema.getColumns().get(index).type().coerce(where.value());
+            return table.lookup(index, value);
+        }
+        return findAll(table, matcher(schema, where));
     }
 }

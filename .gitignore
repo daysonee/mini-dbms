@@ -10,3 +10,5 @@ backup/
 *.tmp
 *.xlsx
 *.zip
+# рабочая база программы
+data/
